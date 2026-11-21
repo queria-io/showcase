@@ -1,0 +1,6 @@
+# 手元で作る図表の結果（gen:snapshots）。検証に使うだけで、ページの結果は Queria が作る
+public/data/articles/
+# publish.yml が public/og から写す
+content/showcase/*/og.webp
+# post_social.py を手元で流すとできる
+__pycache__/

@@ -1,0 +1,99 @@
+name: Post to social
+
+# 新しい記事を本番のページへ上げ終えたあと、publish.yml から呼ばれる。
+# 投稿はページの URL を貼るので、ページができる前に流さない。
+# 投稿文は記事の socialAnnounce、リンクのカードの画像は公開したページの OGP 画像 (.github/scripts/post_social.py)
+
+on:
+  workflow_call:
+    inputs:
+      articles:
+        description: "記事スラッグ (改行区切り)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      articles:
+        description: "記事スラッグ (例: regional-economy)"
+        required: true
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    # ハングした run が既定の 6 時間ぶん課金されるのを止める。
+    # post_social.py は OGP 画像が出るまで最長 10 分待つので、セットアップと投稿のぶんを足す
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Read articles
+        id: articles
+        env:
+          INPUT: ${{ inputs.articles }}
+        run: |
+          # 手で流すときはカンマ区切りでも受ける。スラッグの形をしていないものは捨てる
+          slugs=$(echo "$INPUT" | tr ',' '\n' | sed 's/[[:space:]]//g' | grep -E '^[a-z0-9][a-z0-9-]*$' || true)
+          echo "slugs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$slugs" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.articles.outputs.slugs
+
+      - uses: actions/setup-python@v6
+        if: steps.articles.outputs.slugs
+        with:
+          python-version: "3.13"
+
+      - run: pip install pyyaml
+        if: steps.articles.outputs.slugs
+
+      - name: Post to social media
+        id: posts
+        if: steps.articles.outputs.slugs
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          # 手動実行の入力から来るので、run に直接展開しない
+          SLUGS: ${{ steps.articles.outputs.slugs }}
+        run: |
+          # X と Bluesky は片方が落ちても、もう片方には投稿する (X のクレジット切れで両方止まった)。
+          # 失敗は最後にまとめて job の失敗にする。投稿できた分は Discord に流す
+          urls=""
+          failed=0
+          while IFS= read -r slug; do
+            [ -z "$slug" ] && continue
+            echo "Processing: $slug"
+            output=$(python .github/scripts/post_social.py "$slug") || failed=1
+            echo "$output"
+            urls="${urls}$(echo "$output" | sed -n -E 's/^(X|Bluesky): //p')"$'\n'
+          done <<< "$SLUGS"
+          echo "urls<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$urls" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        if: steps.posts.outputs.urls
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_POST }}
+          URLS: ${{ steps.posts.outputs.urls }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && echo "DISCORD_WEBHOOK_URL not set, skipping." && exit 0
+          while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            payload=$(jq -n --arg url "$url" '{ content: $url }')
+            curl -sf -X POST -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"
+            echo "Discord notified: $url"
+          done <<< "$URLS"
+
+      # 投稿に失敗した SNS があれば、Discord に流したあとで job を落として気づけるようにする
+      - name: Fail if a post failed
+        if: steps.posts.outputs.failed == '1'
+        run: |
+          echo "::error::SNS への投稿に失敗したものがある。上のログを見る"
+          exit 1

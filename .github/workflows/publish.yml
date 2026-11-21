@@ -1,0 +1,165 @@
+name: Publish
+
+# main へのマージで、変わった記事を本番の `queria` のページへ上げる。上げるのは公開の CLI (`queria report`)。
+# 新しく足した記事は、ページを上げたあと social.yml で SNS へ告知する。
+#
+# Queria への書き込みは OIDC で 1 時間のトークンを取って行う。queria アカウントの「GitHub Actions」に
+# このワークフロー (queria-io/showcase、publish.yml、ブランチ main) の登録が要る。
+#
+# 全件を流し直すときは、記事を空にして手動実行する。手動実行では告知しない。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "content/showcase/**"
+      - "public/og/**"
+  workflow_dispatch:
+    inputs:
+      articles:
+        description: "記事スラッグ (カンマ区切り。空なら全件)"
+        required: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    # 続けてマージされたとき、同じページへの書き込みを並べない。
+    # 告知 (OG 画像を最長 10 分待つ) は外に置き、次の記事の反映を待たせない
+    concurrency:
+      group: publish-pages
+      cancel-in-progress: false
+    # 全件でも数分で終わる。ハングした run が既定の 6 時間ぶん課金されるのを止める
+    timeout-minutes: 15
+    outputs:
+      new: ${{ steps.articles.outputs.new }}
+    permissions:
+      contents: read
+      # 前回成功した run を引くため
+      actions: read
+      # Queria のトークンを OIDC で取るため
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # 前回成功した run の commit と比べるため
+          fetch-depth: 0
+
+      - name: Find changed articles
+        id: articles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT: ${{ inputs.articles }}
+        run: |
+          # 既定の bash -e は pipefail を付けない。git diff が落ちても空の一覧として流れ、黙って skip になる
+          set -o pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo "slugs=$INPUT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          head=$(git rev-parse HEAD)
+          # 比べる起点は、前回 push ジョブが成功した run の commit。
+          # concurrency は待っている run を後から来た 1 本で置き換えて取り消すので、直前の commit から比べると
+          # 取り消された run の記事が二度と流れない。失敗した run の記事も次の run で拾い直す。
+          # run 全体の成否で見ると、告知 (social) だけ落ちた run が起点から外れ、次の run が同じ記事を
+          # また告知する (X は重複を 403 で弾くので、以降ずっと落ちる)。ページを上げた push ジョブで見る。
+          # gh が落ちたら止める。黙って古い起点になると告知済みの記事をまた告知するので、一覧は代入で受ける
+          runs=$(gh run list -R "$GITHUB_REPOSITORY" --workflow publish.yml --event push --branch main \
+            --status completed --limit 30 --json databaseId,headSha --jq '.[] | "\(.databaseId) \(.headSha)"')
+          base=""
+          while read -r run sha; do
+            [ -z "$run" ] && continue
+            conclusion=$(gh run view -R "$GITHUB_REPOSITORY" "$run" --json jobs --jq '[.jobs[] | select(.name == "push")][0].conclusion // empty')
+            if [ "$conclusion" = "success" ]; then
+              base="$sha"
+              break
+            fi
+          done <<< "$runs"
+          # 起点が見つからない (このワークフローの初回など) ときは直前の commit と比べ、告知はしない。
+          # 初回は全記事が「新しい記事」に見え、一度に投稿してしまう
+          announce=true
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base=$(git rev-parse HEAD~1)
+            announce=false
+          fi
+          # 古い run を後から再実行したとき (起点がこの commit より先にある) は、新しい本文を古い本文で上書きしない
+          if [ "$base" != "$head" ] && git merge-base --is-ancestor "$head" "$base"; then
+            echo "::warning::$head は前回上げた $base より古い。何も上げない"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "base=$base announce=$announce"
+          # 本文か図か OG 画像が変わった記事。消した記事は流さない (CLI はページを消さない)
+          slugs=$( { git diff --name-only "$base" HEAD -- content/showcase \
+              | sed -E -n 's#^content/showcase/([^/]+)/.*#\1#p'
+            git diff --name-only "$base" HEAD -- public/og \
+              | sed -E -n 's#^public/og/([^/]+)\.webp$#\1#p'
+            } \
+            | sort -u \
+            | while read -r slug; do if [ -f "content/showcase/$slug/index.md" ]; then echo "$slug"; fi; done \
+            | paste -sd, -)
+          if [ -z "$slugs" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          # SNS へ告知する新しい記事。起点の commit にディレクトリごと無かったものだけを数える
+          # (本文を直しただけの記事は告知しない)
+          new=$(echo "$slugs" | tr ',' '\n' \
+            | while read -r slug; do
+                if [ -n "$slug" ] && [ -z "$(git ls-tree "$base" "content/showcase/$slug")" ]; then echo "$slug"; fi
+              done)
+          if [ -n "$new" ] && [ "$announce" = true ]; then
+            { echo "new<<EOF"; echo "$new"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          fi
+          echo "slugs=$slugs" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v6
+        if: steps.articles.outputs.skip != 'true'
+        with:
+          python-version: "3.13"
+
+      # 公開の CLI (PyPI の queria) で上げる。トークンは CLI がジョブの OIDC トークンを Queria で 1 時間の
+      # トークンに替えて取る (id-token: write)。本文の図と OGP の画像は CLI が本文より先に送る
+      - run: pip install "queria>=0.63"
+        if: steps.articles.outputs.skip != 'true'
+
+      # 図表の結果は Queria がページの保存のあとに作る
+      - name: Push pages
+        if: steps.articles.outputs.skip != 'true'
+        env:
+          SLUGS: ${{ steps.articles.outputs.slugs }}
+        run: |
+          if [ -z "$SLUGS" ]; then
+            SLUGS=$(ls content/showcase | paste -sd, -)
+          fi
+          # 既にあるページは、公開でないものも含めてトークンで一覧から引く。匿名の `report view` は公開の
+          # ページしか見えず、非公開のページや一時的な失敗を「無い」と取り違えて create が重複で落ちる。
+          # 一覧が取れなければ (代入なので bash -e で) ここで止める。パイプの途中の失敗も拾うよう pipefail を付ける
+          set -o pipefail
+          existing=$(queria report list --owner queria --format csv | cut -d, -f1)
+          failed=0
+          for slug in $(echo "$SLUGS" | tr ',' ' '); do
+            file="content/showcase/$slug/index.md"
+            # CLI は Markdown の隣の og.webp を OGP の画像として送る
+            if [ -f "public/og/$slug.webp" ]; then cp "public/og/$slug.webp" "content/showcase/$slug/og.webp"; fi
+            if grep -qxF "queria/$slug" <<< "$existing"; then
+              # 書き換えは何度送っても同じ状態になるので、一時的な失敗 (数百回に 1〜2 回の 500 など) は送り直す
+              ok=0
+              for wait_s in 0 5 15; do
+                sleep "$wait_s"
+                if queria report edit "queria/$slug" "$file" --public; then ok=1; break; fi
+              done
+              [ "$ok" = 1 ] || failed=1
+            else
+              # 作成は 1 回目が通っていると 2 回目が重複で断られるので送り直さない
+              queria report create "$file" --owner queria --public || failed=1
+            fi
+          done
+          exit $failed
+
+  # ページができてから告知する。手で流した全件の送り直しでは告知しない
+  social:
+    needs: push
+    if: needs.push.outputs.new != ''
+    uses: ./.github/workflows/social.yml
+    with:
+      articles: ${{ needs.push.outputs.new }}
+    secrets: inherit
