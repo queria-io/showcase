@@ -1,8 +1,8 @@
 ---
-title: サービス産業の活動量は2019年を上回ったが、金融業・保険業は37.0%増え、卸売業は21.3%減った
-description: 第3次産業活動指数の直近12か月（2025年8月〜2026年7月）は2019年平均を1.9%上回りました。業種別では金融業・保険業が37.0%増、卸売業は21.3%減で、13業種のうち2019年を上回るのは5業種です。
+title: サービス産業の活動量は2019年を上回ったが、金融業・保険業は38.9%増え、卸売業は21.6%減った
+description: 第3次産業活動指数の直近12か月（2025年10月〜2026年9月）は2019年平均を2.0ポイント上回りました。業種別では金融業・保険業が38.9%増、卸売業は21.6%減で、13業種のうち2019年を上回るのは5業種です。
 publishedAt: 2026-07-21
-updatedAt: 2026-11-21
+updatedAt: 2026-11-26
 author:
   name: UD
   url: https://udus.dev
@@ -24,15 +24,15 @@ sources:
     publisher: 経済産業省
 agentHint: 宿泊業・飲食サービス業の季節調整済指数を2018年以降の月次で出して。底がいつで直近どこまで戻ったかを、下がり続ける卸売業と並べて
 socialAnnounce: |-
-  経済産業省の第3次産業活動指数を103か月分数えました。
+  経済産業省の第3次産業活動指数の105か月分を集計しました。
 
-  直近12か月の全体は2019年平均を超えましたが、金融業・保険業が37.0%増の一方、卸売業は21.3%減でした。
+  直近12か月の全体は2019年平均を超えましたが、金融業・保険業が38.9%増の一方、卸売業は21.6%減でした。
   Queriaは行政のオープンデータを整えて公開しています。
 ---
 
-経済産業省の[第3次産業活動指数](https://www.meti.go.jp/statistics/tyo/sanzi/index.html)で、サービス産業全体の直近12か月（2025年8月〜2026年7月）の活動量は、2019年平均を1.9ポイント上回りました。13業種のうち2019年を上回っているのは5業種で、金融業・保険業は37.0%増、情報通信業は17.2%増です。卸売業・小売業は14.5%減で、2021年から4年続けて下がっています。その中でも卸売業は21.3%減、小売業は6.1%減でした。
+経済産業省の[第3次産業活動指数](https://www.meti.go.jp/statistics/tyo/sanzi/index.html)で、サービス産業全体の直近12か月（2025年10月〜2026年9月）の活動量は、2019年平均を2.0ポイント上回りました。13業種のうち2019年を上回っているのは5業種で、金融業・保険業は38.9%増、情報通信業は17.4%増です。卸売業・小売業は14.6%減で、2021年から4年続けて下がっています。その中でも卸売業は21.6%減、小売業は6.1%減でした。
 
-第3次産業活動指数は、サービス産業の活動量を月次で集計した統計です。全体値は2020年に大きく下がったあと回復しましたが、業種別に分けると、コロナで大きく下がった業種と、いま水準が低い業種は一致しません。以下の数値は、2018年1月から2026年7月までの103か月分の業種別の系列から求めたものです。
+第3次産業活動指数は、サービス産業の活動量を月次で集計した統計です。全体値は2020年に大きく下がったあと回復しましたが、業種別に分けると、コロナで大きく下がった業種と、いま水準が低い業種は一致しません。以下の数値は、2018年1月から2026年9月までの105か月分の業種別の系列から求めたものです。
 
 ## 13業種のウエイトは、卸売業・小売業だけで全体の4分の1近くを占める
 
@@ -41,7 +41,7 @@ socialAnnounce: |-
 Queriaのデータセットには大分類から細かい品目までが収録されています。このうち日本標準産業分類に対応した13業種と、その合計である「第3次産業総合」を使います。経済産業省が主系列としているのは日本標準産業分類を組み替えた10業種で、13業種は参考系列として公表されているものです。各業種には産業規模に応じたウエイトが与えられ、合計が10000になります。ウエイトは全体値を計算するときの重みであると同時に、その業種がサービス産業に占める大きさの目安にもなります。
 
 ```sql
-WITH j AS (SELECT item_name, weight, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT item_name AS 業種, CAST(weight AS INTEGER) AS ウエイト, ROUND(AVG(CASE WHEN year_month BETWEEN '202508' AND '202607' THEN index_value END) / AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END) * 100 - 100, 1) AS '2019年平均比（%）' FROM j GROUP BY 1, weight ORDER BY weight DESC
+WITH j AS (SELECT item_name, weight, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT item_name AS 業種, CAST(weight AS INTEGER) AS ウエイト, ROUND(AVG(CASE WHEN year_month BETWEEN '202510' AND '202609' THEN index_value END) / AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END) * 100 - 100, 1) AS '2019年平均比（%）' FROM j GROUP BY 1, weight ORDER BY weight DESC
 ```
 
 ウエイトは業種によって大きく異なります。卸売業・小売業だけで全体の4分の1近くを占め、最小の複合サービス事業とは3桁の開きがあります。
@@ -60,7 +60,7 @@ SELECT item_name AS 業種, ROUND(AVG(CASE WHEN year = 2019 THEN index_value END
 
 以降の数値は、すべての系列を2019年（暦年）の平均を100として基準化し直した水準です。
 
-## 季節調整済指数の底は2020年5月の83.9で、2026年7月は103.2
+## 季節調整済指数の底は2020年5月の83.9で、2026年9月は101.8
 
 このデータには、系列種別（`series_type`）として原指数（`original`）と季節調整済指数（`seasonally_adjusted`）の2つが収録されています。原指数は観測されたままの値で、季節調整済指数はそこから毎年繰り返す季節変動を取り除いた値です。全体値で両者を並べました。
 
@@ -162,7 +162,7 @@ SELECT item_name AS 業種, ROUND(AVG(CASE WHEN year = 2019 THEN index_value END
 
 薄い線の原指数は毎月上下に振れており、前月と比較しても、水準が変わったのか季節による変動なのかを判断できません。濃い線の季節調整済指数はこの振れを取り除いてあり、水準の変化だけが残ります。
 
-季節調整済指数で見ると、底は2020年5月の83.9でした。2019年平均より16.1%低い水準です。その後は緩やかに回復し、直近の2026年7月は103.2と、2019年平均を上回っています。
+季節調整済指数で見ると、底は2020年5月の83.9でした。2019年平均より16.1%低い水準です。その後は緩やかに回復し、直近の2026年9月は101.8と、2019年平均を上回っています。
 
 ここで使っている全体値は、業種別の季節調整済指数を加重平均した「第3次産業総合」（`K1D000000I`）で、経済産業省が公表値としている系列です。[統計の概要](https://www.meti.go.jp/statistics/tyo/sanzi/gaiyo.html)のとおり、当月分の公表時に過去3か月分が遡って計算し直され、毎年2月分の公表時には前年の1年分がまとめて補正されます。2026年の各月の値は、まだ確定していません。
 
@@ -276,7 +276,7 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 
 ## 13業種のうち、2019年の水準を上回るのは5業種
 
-直近12か月（2025年8月〜2026年7月）の平均を、2019年の平均と比較します。
+直近12か月（2025年10月〜2026年9月）の平均を、2019年の平均と比較します。
 
 ```chart
 {
@@ -309,15 +309,15 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 }
 ```
 
-13業種のうち、2019年の水準を上回っているのは5業種です。金融業・保険業が37.0%増と突出し、情報通信業が17.2%増、その他サービス業が12.7%増、医療・福祉が11.6%増、不動産業・物品賃貸業が2.2%増です。
+13業種のうち、2019年の水準を上回っているのは5業種です。金融業・保険業が38.9%増と突出し、情報通信業が17.4%増、その他サービス業が12.6%増、医療・福祉が12.5%増、不動産業・物品賃貸業が1.8%増です。
 
-下側では、学習支援業が19.7%減、複合サービス事業が17.1%減、卸売業・小売業が14.5%減となっています。宿泊業・飲食サービス業は9.6%減、運輸業・郵便業は9.0%減で、いずれもまだ2019年の水準に届いていません。
+下側では、学習支援業が20.5%減、複合サービス事業が16.7%減、卸売業・小売業が14.6%減となっています。宿泊業・飲食サービス業は9.9%減、運輸業・郵便業は9.5%減で、いずれもまだ2019年の水準に届いていません。
 
 下位に並ぶ業種の性格は一様ではありません。宿泊業・飲食サービス業は2020年に3割近く落ちた業種ですが、卸売業・小売業の2020年の落ち込みは全体とほぼ同じ程度で、2021年に横ばいとなったあと下がり続けた業種です。
 
 ## 卸売業・小売業は2021年から4年続けて下がり、その大半は卸売業
 
-代表的な業種について、2018年からの年平均の推移をたどります。2026年はまだ7か月分なので、年平均は2025年までです。
+代表的な業種について、2018年からの年平均の推移をたどります。2026年はまだ9か月分なので、年平均は2025年までです。
 
 ```chart
 {
@@ -621,18 +621,18 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 「卸売業、小売業」の大分類の下には、卸売業と小売業が別々の系列として収録されています。2つを分けて、大分類の値と並べました。
 
 ```sql
-WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND year = 2019 GROUP BY 1) SELECT t.item_name AS 業種, ROUND(AVG(CASE WHEN t.year = 2020 THEN t.index_value / b.base * 100 END), 1) AS '2020年', ROUND(AVG(CASE WHEN t.year_month BETWEEN '202508' AND '202607' THEN t.index_value / b.base * 100 END), 1) AS '直近12か月' FROM meti.main.tertiary_industry_activity_index t JOIN b USING (item_code) WHERE t.series_type = 'original' AND t.item_code IN ('K1D000000I', 'JI00000I', 'DD00000I', 'DG00000I') GROUP BY 1 ORDER BY 3
+WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND year = 2019 GROUP BY 1) SELECT t.item_name AS 業種, ROUND(AVG(CASE WHEN t.year = 2020 THEN t.index_value / b.base * 100 END), 1) AS '2020年', ROUND(AVG(CASE WHEN t.year_month BETWEEN '202510' AND '202609' THEN t.index_value / b.base * 100 END), 1) AS '直近12か月' FROM meti.main.tertiary_industry_activity_index t JOIN b USING (item_code) WHERE t.series_type = 'original' AND t.item_code IN ('K1D000000I', 'JI00000I', 'DD00000I', 'DG00000I') GROUP BY 1 ORDER BY 3
 ```
 
-低下の大半は卸売業で起きています。卸売業は2019年平均を100として直近12か月が78.7で、21.3%低い水準です。小売業は93.9で6.1%減にとどまります。「卸売業、小売業」の85.5は、動きの違う2つの業種を平均した値です。
+低下の大半は卸売業で起きています。卸売業は2019年平均を100として直近12か月が78.4で、21.6%低い水準です。小売業は93.9で6.1%減にとどまります。「卸売業、小売業」の85.4は、動きの違う2つの業種を平均した値です。
 
 小売業は最終消費者への販売、卸売業は企業間の取引です。指数の上では、消費者への販売よりも企業間で取引される量のほうが大きく減っています。卸売業の指数は、商業動態統計の販売額を日本銀行の企業物価指数（輸入物価を含む）で割って作られています（[2020年基準改定の概要](https://www.meti.go.jp/statistics/tyo/sanzi/result/pdf/b2020_ITA_ovvj.pdf)の附表1）。販売額が伸びても、物価指数の上昇がそれを上回れば、指数には物量の減少として出ます。
 
 2019年を上回っている2業種では、金融業・保険業（青）は2020年も100.7とほとんど下がらず、以降は毎年上昇して2025年に126.8まで達しました。情報通信業（緑）は2020年に97.0まで下がったものの2022年には2019年を超え、2025年は115.6です。
 
-このグラフは暦年の平均なので、先ほどの直近12か月（2025年8月〜2026年7月）の数値とは範囲が違います。金融業・保険業は暦年2025年が26.8%増、直近12か月では37.0%増と、暦年2025年より高い水準にあります。
+このグラフは暦年の平均なので、先ほどの直近12か月（2025年10月〜2026年9月）の数値とは範囲が違います。金融業・保険業は暦年2025年が26.8%増、直近12か月では38.9%増と、暦年2025年より高い水準にあります。
 
-## 全体値を最も押し下げたのは卸売業・小売業の3.49ポイント
+## 全体値を最も押し下げたのは卸売業・小売業の3.53ポイント
 
 業種ごとの変化が全体値をどれだけ動かしたかを分解します。各業種の指数の変化幅にウエイトを掛けて10000で割ると、全体値の変化に対する寄与が求められます。すべての業種の寄与を足し合わせると、全体値の変化幅になります。
 
@@ -667,23 +667,23 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 }
 ```
 
-全体値は2019年平均を100として直近12か月が101.9で、変化幅は1.9ポイントでした。この内訳を見ると、押し上げ側は金融業・保険業が2.83ポイント、情報通信業が1.95ポイント、医療・福祉が1.33ポイント、その他サービス業が0.97ポイントです。
+全体値は2019年平均を100として直近12か月が102.0で、変化幅は2.0ポイントでした。この内訳を見ると、押し上げ側は金融業・保険業が2.97ポイント、情報通信業が1.97ポイント、医療・福祉が1.44ポイント、その他サービス業が0.95ポイントです。
 
-押し下げ側で最も大きいのは卸売業・小売業の3.49ポイントで、他のすべての押し下げ要因を合計した1.92ポイントより大きくなっています。変化率では学習支援業の19.7%減が最大でしたが、ウエイトが103しかないため寄与は0.21ポイントにとどまります。卸売業・小売業は14.5%減と率では3番目ですが、ウエイト2409を通じて全体値を最も強く押し下げています。
+押し下げ側で最も大きいのは卸売業・小売業の3.53ポイントで、他のすべての押し下げ要因を合計した約2.0ポイントより大きくなっています。変化率では学習支援業の20.5%減が最大でしたが、ウエイトが103しかないため寄与は0.22ポイントにとどまります。卸売業・小売業は14.6%減と率では3番目ですが、ウエイト2409を通じて全体値を最も強く押し下げています。
 
-全体値の1.9ポイントの上昇は、押し上げ側の合計7.33ポイントと押し下げ側の合計5.41ポイントの差し引きです。金融業・保険業と情報通信業の2業種だけで4.78ポイントあり、卸売業・小売業の3.49ポイントの押し下げを上回っています。
+全体値の2.0ポイントの上昇は、押し上げ側の合計7.54ポイントと押し下げ側の合計5.56ポイントの差し引きです。金融業・保険業と情報通信業の2業種だけで4.94ポイントあり、卸売業・小売業の3.53ポイントの押し下げを上回っています。
 
 ## まとめ
 
-- 直近12か月の全体値は2019年平均を1.9ポイント上回るが、13業種のうち2019年を上回るのは5業種で、上昇の大半は金融業・保険業と情報通信業によるもの
-- 卸売業・小売業は2021年から4年続けて下がり、全体値を3.49ポイント押し下げている。その中身は卸売業の21.3%減で、小売業は6.1%減にとどまる
-- 変化率と全体への寄与は順位が一致しない。率で最大の下げの学習支援業は、寄与では0.21ポイントにとどまる
+- 直近12か月の全体値は2019年平均を2.0ポイント上回るが、13業種のうち2019年を上回るのは5業種で、上昇の大半は金融業・保険業と情報通信業によるもの
+- 卸売業・小売業は2021年から4年続けて下がり、全体値を3.53ポイント押し下げている。その中身は卸売業の21.6%減で、小売業は6.1%減にとどまる
+- 変化率と全体への寄与は順位が一致しない。率で最大の下げの学習支援業は、寄与では0.22ポイントにとどまる
 
-全体値が2019年を1.9ポイント上回る同じ12か月に、卸売業の指数は2019年より21.3%低い水準にあります。企業間の取引に関わる事業者には、全体値の回復はそのまま当てはまりません。
+全体値が2019年を2.0ポイント上回る同じ12か月に、卸売業の指数は2019年より21.6%低い水準にあります。企業間の取引に関わる事業者には、全体値の回復はそのまま当てはまりません。
 
 ## データの出典
 
-本記事は経済産業省の[第3次産業活動指数](https://www.meti.go.jp/statistics/tyo/sanzi/index.html)（2020年基準）の月次系列を、2026年10月14日時点で集計しています。対象期間は2018年1月から2026年7月までの103か月で、全国値のみです。基準時とウエイト、卸売業のデフレータは[2020年基準改定の概要](https://www.meti.go.jp/statistics/tyo/sanzi/result/pdf/b2020_ITA_ovvj.pdf)、遡及改定と年間補正は[統計の概要](https://www.meti.go.jp/statistics/tyo/sanzi/gaiyo.html)によります。
+本記事は経済産業省の[第3次産業活動指数](https://www.meti.go.jp/statistics/tyo/sanzi/index.html)（2020年基準）の月次系列を、2026年11月26日時点で集計しています。対象期間は2018年1月から2026年9月までの105か月で、全国値のみです。基準時とウエイト、卸売業のデフレータは[2020年基準改定の概要](https://www.meti.go.jp/statistics/tyo/sanzi/result/pdf/b2020_ITA_ovvj.pdf)、遡及改定と年間補正は[統計の概要](https://www.meti.go.jp/statistics/tyo/sanzi/gaiyo.html)によります。
 
 Queriaは、経済産業省の第3次産業活動指数を、原指数と季節調整済指数を同じテーブルにまとめ、業種コード・業種名・ウエイトを列に持たせた形で公開しています。本記事で使った[第3次産業活動指数のテーブル](/datasets/queria/meti/main/tertiary_industry_activity_index)から、大分類の下にある細かい品目まで降りて、自分の業界に近い系列の動きを確認できます。
 
@@ -696,7 +696,7 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 ```
 
 ```sql id=change_rate
-WITH j AS (SELECT item_name, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT item_name, ROUND(AVG(CASE WHEN year_month BETWEEN '202508' AND '202607' THEN index_value END) / AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END) * 100 - 100, 1) AS pct FROM j GROUP BY 1 ORDER BY pct DESC
+WITH j AS (SELECT item_name, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT item_name, ROUND(AVG(CASE WHEN year_month BETWEEN '202510' AND '202609' THEN index_value END) / AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END) * 100 - 100, 1) AS pct FROM j GROUP BY 1 ORDER BY pct DESC
 ```
 
 ```sql id=yearly
@@ -704,5 +704,5 @@ WITH b AS (SELECT item_code, AVG(index_value) AS base FROM meti.main.tertiary_in
 ```
 
 ```sql id=contribution
-WITH tb AS (SELECT AVG(index_value) AS base FROM meti.main.tertiary_industry_activity_index WHERE item_code = 'K1D000000I' AND series_type = 'original' AND year = 2019), j AS (SELECT item_name, weight, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT j.item_name, ROUND((AVG(CASE WHEN year_month BETWEEN '202508' AND '202607' THEN index_value END) - AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END)) * weight / 10000 / tb.base * 100, 2) AS contrib FROM j CROSS JOIN tb GROUP BY j.item_name, weight, tb.base ORDER BY contrib DESC
+WITH tb AS (SELECT AVG(index_value) AS base FROM meti.main.tertiary_industry_activity_index WHERE item_code = 'K1D000000I' AND series_type = 'original' AND year = 2019), j AS (SELECT item_name, weight, year_month, index_value FROM meti.main.tertiary_industry_activity_index WHERE series_type = 'original' AND item_code LIKE 'J%' AND item_code <> 'J000000I') SELECT j.item_name, ROUND((AVG(CASE WHEN year_month BETWEEN '202510' AND '202609' THEN index_value END) - AVG(CASE WHEN year_month BETWEEN '201901' AND '201912' THEN index_value END)) * weight / 10000 / tb.base * 100, 2) AS contrib FROM j CROSS JOIN tb GROUP BY j.item_name, weight, tb.base ORDER BY contrib DESC
 ```
