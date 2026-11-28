@@ -3,7 +3,7 @@ title: ドラッグストアで売れる食品の量が増えたのは、店が�
 description: ドラッグストアの食品販売額を物価と店舗数で割ると、値上がり分を除いた1店あたりの量は2022年から2025年まで横ばいで、量の伸びの大半は店の数でした。
 ogDescription: ドラッグストアの食品販売額を物価と店舗数で割ると、値上がり分を除いた1店あたりの量は2022年から2025年まで横ばいでした。
 publishedAt: 2026-09-25
-updatedAt: 2026-11-21
+updatedAt: 2026-11-28
 author:
   name: UD
   url: https://udus.dev
@@ -454,7 +454,7 @@ socialAnnounce: |-
 }
 ```
 
-直近の12か月（2025年8月〜2026年7月）の販売額は、ドラッグストアが138.2、スーパーが114.3、コンビニが114.1、百貨店が99.9で、食料の物価は122.9でした。2023年3月以降、物価の線より上を通っているのはドラッグストアだけで、スーパーとコンビニの線は2023年1月から一度も物価の線を上回っていません。
+直近の12か月（2025年10月〜2026年9月）の販売額は、ドラッグストアが138.9、スーパーが114.6、コンビニが113.8、百貨店が100.1で、食料の物価は123.5でした。2023年3月以降、物価の線より上を通っているのはドラッグストアだけで、スーパーとコンビニの線は2023年1月から一度も物価の線を上回っていません。
 
 暦年で区切り、2022年から2025年の販売額の伸びと、それを食料の物価の伸びで割った値を並べると次のとおりです。食料には外食も含まれるので、各業態が売っている品目の値上がり幅とは一致しません。割った値は量の目安として読んでください。
 
@@ -576,7 +576,7 @@ socialAnnounce: |-
 
 ## データの出典
 
-本記事は、経済産業省[商業動態統計](https://www.meti.go.jp/statistics/tyo/syoudou/)の業態別・商品別の月次販売額と店舗数、総務省統計局[消費者物価指数](https://www.stat.go.jp/data/cpi/index.html)（2020年基準・全国）の食料の指数を、2026年9月25日時点で集計しています。販売額は2026年7月分までを使っています。
+本記事は、経済産業省[商業動態統計](https://www.meti.go.jp/statistics/tyo/syoudou/)の業態別・商品別の月次販売額と店舗数、総務省統計局[消費者物価指数](https://www.stat.go.jp/data/cpi/index.html)（2020年基準・全国）の食料の指数を、2026年11月28日時点で集計しています。販売額は2026年9月分までを使っています。
 
 Queriaは、業態ごとに別々の表で公表されている販売額と店舗数を1つのテーブルにまとめ、消費者物価指数も品目・地域・時点を列にして、テーブルと列の説明を付けて公開しています。本記事で使った[業態別・商品別販売額テーブル](/datasets/queria/meti/commerce/retail_sales_by_business_type_and_item)と[消費者物価指数テーブル](/datasets/queria/e_stat/cpi/price_index)から、自社の商品に近い品目の物価で割り直したり、最新の月までグラフを延ばしたりできます。
 
@@ -585,7 +585,7 @@ WITH a AS (SELECT year, SUM(CASE WHEN item_name = '食品' THEN sales_value_mill
 ```
 
 ```sql id=rolling
-WITH m AS (SELECT year, month, SUM(CASE WHEN business_type = 'ドラッグストア' AND item_name = '食品' THEN sales_value_million_yen END) AS drug, SUM(CASE WHEN business_type = 'スーパー' AND item_name = '飲食料品' THEN sales_value_million_yen END) AS sup, SUM(CASE WHEN business_type = 'コンビニエンスストア' AND item_name IN ('FF・日配食品', '加工食品') THEN sales_value_million_yen END) AS cvs, SUM(CASE WHEN business_type = '百貨店' AND item_name = '飲食料品' THEN sales_value_million_yen END) AS dept FROM meti.commerce.retail_sales_by_business_type_and_item WHERE year BETWEEN 2022 AND 2026 GROUP BY year, month), p AS (SELECT year, CAST(regexp_extract(time_name, '年([0-9]+)月', 1) AS INTEGER) AS month, value AS cpi FROM e_stat.cpi.price_index WHERE tab = '1' AND area = '00000' AND cat01 = '0002' AND time_name LIKE '%月' AND year BETWEEN 2022 AND 2026), r AS (SELECT m.year, m.month, SUM(drug) OVER w AS drug, SUM(sup) OVER w AS sup, SUM(cvs) OVER w AS cvs, SUM(dept) OVER w AS dept, AVG(cpi) OVER w AS cpi, COUNT(*) OVER w AS n FROM m JOIN p ON m.year = p.year AND m.month = p.month WINDOW w AS (ORDER BY m.year, m.month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW)), b AS (SELECT * FROM r WHERE year = 2022 AND month = 12) SELECT printf('%04d-%02d-01', r.year, r.month) AS ym, ROUND(r.drug / b.drug * 100, 1) AS drug, ROUND(r.sup / b.sup * 100, 1) AS sup, ROUND(r.cvs / b.cvs * 100, 1) AS cvs, ROUND(r.dept / b.dept * 100, 1) AS dept, ROUND(r.cpi / b.cpi * 100, 1) AS cpi FROM r, b WHERE r.n = 12 AND r.year * 100 + r.month <= 202607 ORDER BY r.year, r.month
+WITH m AS (SELECT year, month, SUM(CASE WHEN business_type = 'ドラッグストア' AND item_name = '食品' THEN sales_value_million_yen END) AS drug, SUM(CASE WHEN business_type = 'スーパー' AND item_name = '飲食料品' THEN sales_value_million_yen END) AS sup, SUM(CASE WHEN business_type = 'コンビニエンスストア' AND item_name IN ('FF・日配食品', '加工食品') THEN sales_value_million_yen END) AS cvs, SUM(CASE WHEN business_type = '百貨店' AND item_name = '飲食料品' THEN sales_value_million_yen END) AS dept FROM meti.commerce.retail_sales_by_business_type_and_item WHERE year BETWEEN 2022 AND 2026 GROUP BY year, month), p AS (SELECT year, CAST(regexp_extract(time_name, '年([0-9]+)月', 1) AS INTEGER) AS month, value AS cpi FROM e_stat.cpi.price_index WHERE tab = '1' AND area = '00000' AND cat01 = '0002' AND time_name LIKE '%月' AND year BETWEEN 2022 AND 2026), r AS (SELECT m.year, m.month, SUM(drug) OVER w AS drug, SUM(sup) OVER w AS sup, SUM(cvs) OVER w AS cvs, SUM(dept) OVER w AS dept, AVG(cpi) OVER w AS cpi, COUNT(*) OVER w AS n FROM m JOIN p ON m.year = p.year AND m.month = p.month WINDOW w AS (ORDER BY m.year, m.month ROWS BETWEEN 11 PRECEDING AND CURRENT ROW)), b AS (SELECT * FROM r WHERE year = 2022 AND month = 12) SELECT printf('%04d-%02d-01', r.year, r.month) AS ym, ROUND(r.drug / b.drug * 100, 1) AS drug, ROUND(r.sup / b.sup * 100, 1) AS sup, ROUND(r.cvs / b.cvs * 100, 1) AS cvs, ROUND(r.dept / b.dept * 100, 1) AS dept, ROUND(r.cpi / b.cpi * 100, 1) AS cpi FROM r, b WHERE r.n = 12 AND r.year * 100 + r.month <= 202609 ORDER BY r.year, r.month
 ```
 
 ```sql id=growth
